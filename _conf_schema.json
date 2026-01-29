@@ -1,0 +1,20 @@
+{
+  "auto_clean_enabled": {
+    "description": "全局自动清人开关",
+    "type": "bool",
+    "default": false,
+    "hint": "开启或关闭全局自动清人功能"
+  },
+  "enabled_groups": {
+    "description": "启用自动清人的群组列表",
+    "type": "list",
+    "default": [],
+    "hint": "在此列表中的群聊将启用自动清人功能"
+  },
+  "clean_delay_seconds": {
+    "description": "清人动作延时（秒）",
+    "type": "int",
+    "default": 5,
+    "hint": "执行清人动作前的延时时间，单位为秒"
+  }
+}

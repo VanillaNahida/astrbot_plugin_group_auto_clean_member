@@ -1,0 +1,6 @@
+name: astrbot_plugin_group_auto_clean_member 
+display_name: 群聊自动满员清人插件
+desc: AstrBot 群聊自动满员清人插件，当群聊满员时，自动移除活跃度倒数第一的成员，同时提示倒数第二成员尽快发言。
+version: v1.0.0
+author: 香草味的纳西妲喵（VanillaNahida）
+repo: https://github.com/VanillaNahida/astrbot_plugin_group_auto_clean_member
