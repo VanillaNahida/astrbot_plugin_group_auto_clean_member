@@ -275,8 +275,8 @@ class GroupAutoCleanMemberPlugin(Star):
         # 发送开始清理提示
         yield event.plain_result(f"开始执行群 {group_id} 的自动清理任务，将清理最不活跃群成员...")
         
-        # 调用自动清人逻辑
-        await self._execute_auto_clean(event, group_id_str)
+        # 调用自动清人逻辑（手动触发）
+        await self._execute_auto_clean(event, group_id_str, is_manual_trigger=True)
 
     async def _get_group_info(self, event: AstrMessageEvent, group_id: str):
         """获取群信息"""
@@ -359,8 +359,12 @@ class GroupAutoCleanMemberPlugin(Star):
             logger.error(f"移除成员 {user_id} 失败：{e}")
             return False
 
-    async def _execute_auto_clean(self, event: AstrMessageEvent, group_id: str):
-        """执行自动清人"""
+    async def _execute_auto_clean(self, event: AstrMessageEvent, group_id: str, is_manual_trigger: bool = False):
+        """执行自动清人
+        
+        参数:
+            is_manual_trigger: 是否为手动触发（True: 手动命令触发, False: 自动触发）
+        """
         # 检查自动清人功能是否开启
         if not self.auto_clean_enabled:
             logger.info("自动清人功能已关闭，跳过清人操作")
@@ -394,8 +398,9 @@ class GroupAutoCleanMemberPlugin(Star):
         # 检查群是否满员
         if member_count < max_member_count:
             logger.info(f"群 {group_id} 目前 {member_count}/{max_member_count} 人，未达满员，无需清人")
-            # 发送提示消息
-            await event.bot.api.call_action('send_group_msg', group_id=group_id, message=f"群 {group_id} 目前 {member_count}/{max_member_count} 人，未达满员，无需清人，任务已结束。")
+            # 只有在手动触发时才发送提示消息
+            if is_manual_trigger:
+                await event.bot.api.call_action('send_group_msg', group_id=group_id, message=f"群 {group_id} 目前 {member_count}/{max_member_count} 人，未达满员，无需清人，任务已结束。")
             return
 
         logger.info(f"群 {group_id} 已满员 {member_count}/{max_member_count}，开始执行自动清人")
