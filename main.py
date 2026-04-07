@@ -9,7 +9,7 @@ import asyncio
     "astrbot_plugin_group_auto_clean_member", 
     "香草味的纳西妲喵（VanillaNahida）", 
     "群聊自动满员清人插件", 
-    "1.0.0"
+    "1.0.1"
     )
 class GroupAutoCleanMemberPlugin(Star):
     def __init__(self, context: Context, config: dict = None):
@@ -461,23 +461,38 @@ class GroupAutoCleanMemberPlugin(Star):
                     logger.error(f"发送提示消息失败：{e}")
             else:
                 logger.error("移除成员失败")
+
+            # 停止事件传播，避免被大模型处理
+            event.stop_event()
                 
         except Exception as e:
             logger.error(f"延时清人任务执行失败：{e}")
+            event.stop_event()
 
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     async def handle_event(self, event: AstrMessageEvent):
         """处理进群退群事件和监听群消息"""
-        if event.get_platform_name() != "aiocqhttp":
-            return
+        try:
+            if event.get_platform_name() != "aiocqhttp":
+                return
 
-        raw = event.message_obj.raw_message
-        post_type = raw.get("post_type")
-        
-        if post_type == "notice":
-            if raw.get("notice_type") == "group_increase":
-                group_id = str(raw.get("group_id"))
-                # 检查该群是否在启用列表中
-                if group_id in self.enabled_groups:
-                    logger.info(f"检测到新成员进群，群 {group_id} 开始执行满员检查")
-                    await self._execute_auto_clean(event, group_id)
+            raw = event.message_obj.raw_message
+            if raw is None:
+                return
+                
+            post_type = raw.get("post_type")
+            
+            if post_type == "notice":
+                if raw.get("notice_type") == "group_increase":
+                    group_id = str(raw.get("group_id"))
+                    # 检查该群是否在启用列表中
+                    if group_id in self.enabled_groups:
+                        logger.info(f"检测到新成员进群，群 {group_id} 开始执行满员检查")
+                        await self._execute_auto_clean(event, group_id)
+
+            # 停止事件传播，避免被大模型处理
+            event.stop_event()
+
+        except Exception as e:
+            logger.error(f"handle_event 处理事件时发生异常: {e}")
+            event.stop_event()
