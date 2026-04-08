@@ -9,7 +9,7 @@ import asyncio
     "astrbot_plugin_group_auto_clean_member", 
     "香草味的纳西妲喵（VanillaNahida）", 
     "群聊自动满员清人插件", 
-    "1.0.2"
+    "1.0.3"
     )
 class GroupAutoCleanMemberPlugin(Star):
     def __init__(self, context: Context, config: dict = None):
@@ -97,6 +97,23 @@ class GroupAutoCleanMemberPlugin(Star):
             return (False, "bot权限不足，需要管理员权限")
         
         return (True, "")
+        
+    def _is_member_admin_or_owner(self, member: dict) -> bool:
+        """检查成员是否是管理员或群主
+        
+        参数:
+            member: 成员信息字典，包含 role 字段
+            
+        返回:
+            True: 是管理员或群主
+            False: 不是管理员或群主
+        """
+        try:
+            role = member.get("role", "member")
+            return role in ["admin", "owner"]
+        except Exception as e:
+            logger.error(f"检查成员权限失败: {e}")
+            return False
 
     async def terminate(self):
         """插件销毁方法"""
@@ -220,9 +237,19 @@ class GroupAutoCleanMemberPlugin(Star):
         # 计算活跃度并排序
         sorted_members = self._calculate_activity(member_list)
         
-        # 获取活跃度倒数第一和倒数第二的成员
-        least_active_member = sorted_members[0]
-        second_least_active_member = sorted_members[1]
+        # 过滤出普通成员（非管理员和群主）
+        normal_members = []
+        for member in sorted_members:
+            if not self._is_member_admin_or_owner(member):
+                normal_members.append(member)
+        
+        if len(normal_members) < 2:
+            yield event.plain_result("❌ 普通成员数量不足，无法查询")
+            return
+        
+        # 获取活跃度倒数第一和倒数第二的普通成员
+        least_active_member = normal_members[0]
+        second_least_active_member = normal_members[1]
         
         # 发送结果消息
         message = f"📊 群 {group_id} 最不活跃成员统计：\n\n"
@@ -331,7 +358,8 @@ class GroupAutoCleanMemberPlugin(Star):
                 "join_time_str": join_time_str,
                 "last_sent_time": last_sent_time,
                 "last_sent_time_str": last_sent_time_str,
-                "never_spoken": (last_sent_time == join_time)
+                "never_spoken": (last_sent_time == join_time),
+                "role": item.get("role", "member")
             })
         
         # 按活跃度排序（最久没发言的在前）
@@ -439,11 +467,27 @@ class GroupAutoCleanMemberPlugin(Star):
             # 计算活跃度并排序
             sorted_members = self._calculate_activity(member_list)
             
-            # 获取活跃度倒数第一和倒数第二的成员
-            least_active_member = sorted_members[0]
-            second_least_active_member = sorted_members[1]
+            # 过滤出普通成员（非管理员和群主）
+            normal_members = []
+            for member in sorted_members:
+                if not self._is_member_admin_or_owner(member):
+                    normal_members.append(member)
+            
+            if len(normal_members) < 1:
+                logger.error("没有找到可以移除的普通成员")
+                return
+            
+            least_active_member = normal_members[0]
+            
+            # 找到倒数第二活跃的普通成员
+            second_least_active_member = None
+            if len(normal_members) >= 2:
+                second_least_active_member = normal_members[1]
+            else:
+                # 如果只有一个普通成员，找一个活跃的普通成员（最后一个）
+                second_least_active_member = normal_members[-1]
 
-            logger.info(f"活跃度倒数第一：{least_active_member['nickname']}({least_active_member['user_id']})")
+            logger.info(f"活跃度倒数第一（可移除）：{least_active_member['nickname']}({least_active_member['user_id']})")
             logger.info(f"活跃度倒数第二：{second_least_active_member['nickname']}({second_least_active_member['user_id']})")
 
             # 移除活跃度倒数第一的成员
