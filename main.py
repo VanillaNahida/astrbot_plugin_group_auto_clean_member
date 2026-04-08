@@ -9,7 +9,7 @@ import asyncio
     "astrbot_plugin_group_auto_clean_member", 
     "香草味的纳西妲喵（VanillaNahida）", 
     "群聊自动满员清人插件", 
-    "1.0.1"
+    "1.0.2"
     )
 class GroupAutoCleanMemberPlugin(Star):
     def __init__(self, context: Context, config: dict = None):
@@ -490,9 +490,6 @@ class GroupAutoCleanMemberPlugin(Star):
                         logger.info(f"检测到新成员进群，群 {group_id} 开始执行满员检查")
                         await self._execute_auto_clean(event, group_id)
 
-            # 停止事件传播，避免被大模型处理
-            event.stop_event()
 
         except Exception as e:
             logger.error(f"handle_event 处理事件时发生异常: {e}")
-            event.stop_event()
